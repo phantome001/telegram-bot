@@ -1,7 +1,18 @@
+# Telegram bot
 python-telegram-bot==20.5
+
+# HTTP requests
 requests==2.31.0
+
+# Load environment variables
 python-dotenv==1.0.0
+
+# Plotting library
 matplotlib==3.7.2
+
+# Numerical computations
 numpy==1.25.2
+
+# Build dependencies to avoid 'setuptools.build_meta' error
 setuptools>=65.0.0
-wheel>=0.38.0
+wheel
