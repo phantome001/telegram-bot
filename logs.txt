@@ -1,0 +1,12 @@
+[2025-09-04 02:39:04.150682] User: ghostski1, URL: https://google.com, Result: ✅ النتيجة:
+🔴 ضار: 0
+🟢 آمن: 72
+[2025-09-04 02:42:13.165179] User: ghostski1, URL: https://www.google.com, Result: ضار=0, آمن=71
+[2025-09-04 02:48:57.400945] User: ghostski1, URL: http://testphp.vulnweb.com
+VirusTotal: 🔴 ضار=0, 🟢 آمن=0
+❌ فحص PhishTank غير مفعل
+❌ فحص URLScan غير مفعل
+
+[2025-09-04 03:07:02.239544] User: ghostski1, URL: https://google.com, Result: ضار=0, آمن=72
+[2025-09-04 03:12:46.835344] User: ghostski1, URL: https://google.com, Result: ضار=0, آمن=72
+[2025-09-04 22:21:36.956952] User: ghostski1, URL: https://google.com, Result: ضار=0, آمن=0
