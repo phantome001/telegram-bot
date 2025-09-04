@@ -7,27 +7,27 @@ from dotenv import load_dotenv
 from telegram import Update, InputFile, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 
-# تحميل القيم من ملف .env
+# ======= تحميل القيم من ملف .env =======
 load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
 VT_API_KEY = os.getenv("VIRUSTOTAL_API_KEY")
 
-# إعداد اللوج
+# ======= إعداد اللوج =======
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
 
 # ======= دوال مساعدة =======
-def get_user_log_file(user_id):
+def get_user_log_file(user_id: int) -> str:
     return f"logs_{user_id}.txt"
 
-def save_log(user_id, url, malicious, harmless):
+def save_log(user_id: int, url: str, malicious: int, harmless: int):
     log_file = get_user_log_file(user_id)
     with open(log_file, "a", encoding="utf-8") as f:
         f.write(f"[{datetime.now()}] URL: {url}, ضار={malicious}, آمن={harmless}\n")
 
-def get_stats(user_id):
+def get_stats(user_id: int) -> dict:
     log_file = get_user_log_file(user_id)
     if not os.path.exists(log_file):
         return {"total": 0, "malicious": 0, "harmless": 0}
@@ -41,14 +41,14 @@ def get_stats(user_id):
                     malicious += m
                     harmless += h
                 except:
-                    pass
+                    continue
     return {"total": malicious + harmless, "malicious": malicious, "harmless": harmless}
 
 # ======= أوامر البوت =======
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = (
         "👋 مرحبا بك في بوت الفحص 🔍\n\n"
-        "الأوامر المتاحة:\n"
+        "الأوامر:\n"
         "/scan + رابط 🔗 - فحص رابط\n"
         "/export - تصدير تقريرك\n"
         "/clear - مسح تقريرك\n"
@@ -78,7 +78,6 @@ async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def scan_link(update: Update, url: str):
     user_id = update.effective_user.id
     await update.message.reply_text(f"⏳ جاري فحص الرابط: {url}")
-
     try:
         headers = {"x-apikey": VT_API_KEY}
         data = {"url": url}
@@ -110,18 +109,17 @@ async def scan_link(update: Update, url: str):
     except Exception as e:
         await update.message.reply_text(f"❌ خطأ: {e}")
 
-# ======= الفحص التلقائي =======
+# ======= الفحص التلقائي لأي رابط =======
 async def auto_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
-    url_pattern = re.compile(r"(https?://[^\s]+|www\.[^\s]+)")
-    urls = url_pattern.findall(text)
+    urls = re.findall(r"(https?://[^\s]+|www\.[^\s]+)", text)
     for url in urls:
         if url.startswith("www."):
             url = "https://" + url
         await scan_link(update, url)
 
 # ======= تصدير التقرير =======
-async def export_report(user_id, chat_id, context: ContextTypes.DEFAULT_TYPE):
+async def export_report(user_id: int, chat_id: int, context: ContextTypes.DEFAULT_TYPE):
     log_file = get_user_log_file(user_id)
     if not os.path.exists(log_file):
         await context.bot.send_message(chat_id, "⚠️ لا يوجد تقارير لك حتى الآن.")
@@ -130,7 +128,7 @@ async def export_report(user_id, chat_id, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_document(chat_id, InputFile(f), filename="scan_report.txt")
 
 # ======= مسح التقرير =======
-async def clear_report(user_id, chat_id, context: ContextTypes.DEFAULT_TYPE):
+async def clear_report(user_id: int, chat_id: int, context: ContextTypes.DEFAULT_TYPE):
     log_file = get_user_log_file(user_id)
     if os.path.exists(log_file):
         os.remove(log_file)
@@ -138,25 +136,12 @@ async def clear_report(user_id, chat_id, context: ContextTypes.DEFAULT_TYPE):
     else:
         await context.bot.send_message(chat_id, "⚠️ لا يوجد تقارير لمسحها.")
 
-# ======= عرض الإحصائيات =======
-async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    s = get_stats(user_id)
-    msg = (
-        f"📊 إحصائياتك:\n\n"
-        f"إجمالي الروابط المفحوصة: {s['total']}\n"
-        f"🔴 ضارة: {s['malicious']}\n"
-        f"🟢 آمنة: {s['harmless']}"
-    )
-    await update.message.reply_text(msg)
-
 # ======= التعامل مع الأزرار =======
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     user_id = query.from_user.id
     chat_id = query.message.chat_id
-
     if query.data == "export":
         await export_report(user_id, chat_id, context)
     elif query.data == "clear":
@@ -169,6 +154,7 @@ def main():
     if not VT_API_KEY:
         raise ValueError("⚠️ لم يتم العثور على VT_API_KEY")
 
+    # استخدام Application الحديثة فقط
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
     # أوامر البوت
@@ -176,7 +162,7 @@ def main():
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("about", about))
     app.add_handler(CommandHandler("scan", lambda u, c: scan_link(u, c.args[0]) if c.args else u.message.reply_text("⚠️ يجب إدخال رابط.")))
-    app.add_handler(CommandHandler("stats", stats))
+    app.add_handler(CommandHandler("stats", lambda u, c: stats(u, c)))
     app.add_handler(CommandHandler("export", lambda u, c: export_report(u.effective_user.id, u.effective_chat.id, c)))
     app.add_handler(CommandHandler("clear", lambda u, c: clear_report(u.effective_user.id, u.effective_chat.id, c)))
 
