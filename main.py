@@ -136,6 +136,13 @@ async def clear_report(user_id: int, chat_id: int, context: ContextTypes.DEFAULT
     else:
         await context.bot.send_message(chat_id, "⚠️ لا يوجد تقارير لمسحها.")
 
+# ======= عرض الإحصائيات =======
+async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    s = get_stats(user_id)
+    msg = f"📊 إحصائياتك:\n🔴 ضار: {s['malicious']}\n🟢 آمن: {s['harmless']}\n📌 الإجمالي: {s['total']}"
+    await update.message.reply_text(msg)
+
 # ======= التعامل مع الأزرار =======
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -154,7 +161,6 @@ def main():
     if not VT_API_KEY:
         raise ValueError("⚠️ لم يتم العثور على VT_API_KEY")
 
-    # استخدام Application الحديثة فقط
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
     # أوامر البوت
@@ -162,7 +168,7 @@ def main():
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("about", about))
     app.add_handler(CommandHandler("scan", lambda u, c: scan_link(u, c.args[0]) if c.args else u.message.reply_text("⚠️ يجب إدخال رابط.")))
-    app.add_handler(CommandHandler("stats", lambda u, c: stats(u, c)))
+    app.add_handler(CommandHandler("stats", stats))
     app.add_handler(CommandHandler("export", lambda u, c: export_report(u.effective_user.id, u.effective_chat.id, c)))
     app.add_handler(CommandHandler("clear", lambda u, c: clear_report(u.effective_user.id, u.effective_chat.id, c)))
 
