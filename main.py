@@ -6,7 +6,6 @@ from datetime import datetime
 from dotenv import load_dotenv
 from telegram import Update, InputFile, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
-import matplotlib.pyplot as plt  # 📊 لإضافة الرسم
 
 # تحميل القيم من ملف .env
 load_dotenv()
@@ -26,9 +25,7 @@ def get_user_log_file(user_id):
 def save_log(user_id, url, malicious, harmless):
     log_file = get_user_log_file(user_id)
     with open(log_file, "a", encoding="utf-8") as f:
-        f.write(
-            f"[{datetime.now()}] URL: {url}, ضار={malicious}, آمن={harmless}\n"
-        )
+        f.write(f"[{datetime.now()}] URL: {url}, ضار={malicious}, آمن={harmless}\n")
 
 def get_stats(user_id):
     log_file = get_user_log_file(user_id)
@@ -77,13 +74,6 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🤖 بوت فحص الروابط باستخدام VirusTotal API.")
 
-async def scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.args:
-        await update.message.reply_text("⚠️ يجب إدخال رابط.\nمثال:\n/scan https://example.com")
-        return
-    url = context.args[0]
-    await scan_link(update, url)
-
 # ======= دالة الفحص =======
 async def scan_link(update: Update, url: str):
     user_id = update.effective_user.id
@@ -105,7 +95,6 @@ async def scan_link(update: Update, url: str):
 
             msg = f"🔍 النتيجة:\n🔴 ضار: {malicious}\n🟢 آمن: {harmless}"
 
-            # أزرار التحكم
             keyboard = [
                 [InlineKeyboardButton("📂 تصدير تقريري", callback_data="export")],
                 [InlineKeyboardButton("🗑️ مسح تقريري", callback_data="clear")]
@@ -113,8 +102,6 @@ async def scan_link(update: Update, url: str):
             reply_markup = InlineKeyboardMarkup(keyboard)
 
             await update.message.reply_text(msg, reply_markup=reply_markup)
-
-            # حفظ في سجل المستخدم
             save_log(user_id, url, malicious, harmless)
 
         else:
@@ -163,23 +150,6 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(msg)
 
-    # 📊 رسم بياني (Pie Chart)
-    if s["total"] > 0:
-        labels = ["ضارة", "آمنة"]
-        values = [s["malicious"], s["harmless"]]
-        colors = ["red", "green"]
-
-        plt.figure(figsize=(4, 4))
-        plt.pie(values, labels=labels, colors=colors, autopct="%1.1f%%", startangle=90)
-        plt.title("نسبة الروابط")
-        chart_file = f"chart_{user_id}.png"
-        plt.savefig(chart_file)
-        plt.close()
-
-        with open(chart_file, "rb") as f:
-            await update.message.reply_photo(InputFile(f), caption="📊 توزيع الروابط")
-        os.remove(chart_file)
-
 # ======= التعامل مع الأزرار =======
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -201,13 +171,12 @@ def main():
 
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
+    # أوامر البوت
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("about", about))
-    app.add_handler(CommandHandler("scan", scan))
+    app.add_handler(CommandHandler("scan", lambda u, c: scan_link(u, c.args[0]) if c.args else u.message.reply_text("⚠️ يجب إدخال رابط.")))
     app.add_handler(CommandHandler("stats", stats))
-
-    # الأوامر المباشرة
     app.add_handler(CommandHandler("export", lambda u, c: export_report(u.effective_user.id, u.effective_chat.id, c)))
     app.add_handler(CommandHandler("clear", lambda u, c: clear_report(u.effective_user.id, u.effective_chat.id, c)))
 
